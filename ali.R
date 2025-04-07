@@ -88,12 +88,13 @@ simulations <- tibble()
 counter <- 1
 
 find_moe <- function(size,prob){
-  currents <- tibble(percent = numeric(10000))
-  for(i in 1:10000){
-    currents$percent[i] <- (rbinom(1, size, prob)/size)
-  }
-  lower_bound <- quantile(currents$percent, 0.025)
-  upper_bound <- quantile(currents$percent, 0.975)
+  # currents <- tibble(percent = numeric(10000))
+  # for(i in 1:10000){
+  #   currents$percent[i] <- (rbinom(1, size, prob)/size)
+  # }
+  current <- (rbinom(10000, size, prob)/size)
+  lower_bound <- quantile(current, 0.025)
+  upper_bound <- quantile(current, 0.975)
   moe<- (upper_bound[[1]] - lower_bound[[1]])/2
   return(moe)
 }
@@ -114,3 +115,11 @@ for(j in 1:length(p)){
     counter <- counter +1
   }
 }
+
+ggplot(simulations)+
+  scale_fill_viridis_c(option = "plasma")+
+  geom_raster(aes(n,p, fill = moe))+
+  labs(x = "sample size",
+       y = "percent of people happy",
+       title = "margins of error comparison")+
+  theme_bw()
