@@ -47,15 +47,15 @@ for(i in 1:R){
 )
 lower_bound2 <- quantile(larger.samples$sat, 0.025)
 upper_bound2 <- quantile(larger.samples$sat, 0.975)
-range2 <- upper_bound[[1]] - lower_bound[[1]]
-moe2 <- range/2
-# moe didn't quite half and is slightly over the 2% range
+range2 <- upper_bound2[[1]] - lower_bound2[[1]]
+moe2 <- range2/2
+# the moe is approximately 2.1% and is slightly over the range
 
 larger.polls.hist +polls.hist
 
 
+##Task 2: resampling 
 gallup.survey <- data.frame(values = sample(c(rep(1, 391), rep(0, 613))))
-
 resamples <- tibble(value = numeric(R))
 for(i in 1:R){
   # Take a resample
@@ -82,17 +82,14 @@ range.resample <- upper_bound3[[1]] - lower_bound3[[1]]
 moe.resample <- range.resample/2
 # moe is lower than the stimulation
 
+
+
 n <- seq(100,3000,10)
 p <- seq(0.01, 0.99, 0.01)
 simulations <- tibble()
 counter <- 1
 
-
 find_moe <- function(size,prob){
-  # currents <- tibble(percent = numeric(10000))
-  # for(i in 1:10000){
-  #   currents$percent[i] <- (rbinom(1, size, prob)/size)
-  # }
   current <- (rbinom(10000, size, prob)/size)
   lower_bound <- quantile(current, 0.025)
   upper_bound <- quantile(current, 0.975)

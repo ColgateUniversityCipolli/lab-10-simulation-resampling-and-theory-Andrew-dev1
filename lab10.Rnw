@@ -1,54 +1,4 @@
-\documentclass{article}\usepackage[]{graphicx}\usepackage[]{xcolor}
-% maxwidth is the original width if it is less than linewidth
-% otherwise use linewidth (to make sure the graphics do not exceed the margin)
-\makeatletter
-\def\maxwidth{ %
-  \ifdim\Gin@nat@width>\linewidth
-    \linewidth
-  \else
-    \Gin@nat@width
-  \fi
-}
-\makeatother
-
-\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
-\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
-\newcommand{\hlsng}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
-\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
-\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
-\newcommand{\hldef}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
-\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
-\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
-\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
-\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
-\let\hlipl\hlkwb
-
-\usepackage{framed}
-\makeatletter
-\newenvironment{kframe}{%
- \def\at@end@of@kframe{}%
- \ifinner\ifhmode%
-  \def\at@end@of@kframe{\end{minipage}}%
-  \begin{minipage}{\columnwidth}%
- \fi\fi%
- \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
- \colorbox{shadecolor}{##1}\hskip-\fboxsep
-     % There is no \\@totalrightmargin, so:
-     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
- \MakeFramed {\advance\hsize-\width
-   \@totalleftmargin\z@ \linewidth\hsize
-   \@setminipage}}%
- {\par\unskip\endMakeFramed%
- \at@end@of@kframe}
-\makeatother
-
-\definecolor{shadecolor}{rgb}{.97, .97, .97}
-\definecolor{messagecolor}{rgb}{0, 0, 0}
-\definecolor{warningcolor}{rgb}{1, 0, 1}
-\definecolor{errorcolor}{rgb}{1, 0, 0}
-\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
-
-\usepackage{alltt}
+\documentclass{article}
 \usepackage{amsmath} %This allows me to use the align functionality.
                      %If you find yourself trying to replicate
                      %something you found online, ensure you're
@@ -71,7 +21,6 @@
 \newenvironment{Figure}
   {\par\medskip\noindent\minipage{\linewidth}}
   {\endminipage\par\medskip}
-\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 
 \vspace{-1in}
@@ -126,7 +75,32 @@ Adelie & 3700.66 & 3700.00 & 458.57 & 650.00 \\
 \label{tab:penguins}
 %\end{table} % YOU NEED TO REPLACE THIS WITH FIGURE
 \end{Figure}
+<<eval=F, echo=F>>=
+library(tidyverse)
+library(palmerpenguins)
+pdf("penguins.pdf", width=3, height=2)
+ggplot(data=penguins)+
+  geom_boxplot(aes(x=species, y=body_mass_g))+
+  theme_bw()+
+  xlab("Species")+
+  ylab("Body Mass (g)")
+dev.off()
 
+library(xtable)
+penguins |>
+  group_by(species) |>
+  summarize(
+    Mean   = mean(body_mass_g, na.rm=T),
+    Median = median(body_mass_g, na.rm=T),
+    SD     = sd(body_mass_g, na.rm=T),
+    IQR    = IQR(body_mass_g, na.rm=T),
+  )|>
+  xtable(caption = "This is a table.",
+         label = "tab:penguins",
+         digits = 2 ) |>
+  print(table.placement="H",
+        include.rownames=F)
+@
 \section{Methods}
 First, we tested the claim if increasing sample sizes from 1000 to 2000 would reduce the MOE. With the \texttt{rbinom()} function from the \texttt{stats} \citep{stats} package, we created 10000 polls of size 1004 with an assumed population proportion of 0.39 and plotted a histogram of the sampling distribution using \texttt{tidyverse} \citep{tidyverse} package. Then, we repeated the process with polls of size 2008 to measure the difference in moe. 
 
@@ -136,26 +110,67 @@ By resampling the data 10000 times with the basic \texttt{R} function \texttt{sa
 
 \section{Results}
 The histograms of the polls are shown below. They both follow a relatively normal distribution with little skewness, but the sampling distribution for the smaller sample size in Figure \ref{plot1} has a larger variability compared to the Figure \ref{plot2}. This matches with the calculated margin of errors as the polls with sample size of 1004 had a MOE of 0.0309 (approximately 3.1\%), and the polls with sample size of 2008 had a MOE of 0.0211 (approximately 2.1 \%). The MOE for sample size 1004 is within the projected 4\% and while the 2.1\% is slightly more than the Gallup polls statement of within 2\% MOE, it is still very close for the polls of sample size 2008. 
-\newpage
 
+\newpage
+<<plot1, echo=FALSE, eval=F, message=FALSE, warning=FALSE, size='scriptsize'>>=
+# loading libraries
+library(tidyverse)
+library(patchwork)
+
+R <- 10000
+sample.size <- 1004
+satisfaction <- 0.39
+samples <- tibble(sat = numeric(R))
+
+for(i in 1:R){
+  samples$sat[i] <- (rbinom(1, sample.size, satisfaction)/sample.size)
+}
+
+(polls.hist <- ggplot(samples) +
+    geom_histogram(aes(x=sat, y=after_stat(density)),
+                   breaks = seq(0.325, 0.475, 0.005),
+                   color="grey")+
+    stat_density(aes(x = sat), geom="line") +
+    geom_hline(yintercept=0)+
+    theme_bw()+
+    xlab("Satisfaction proportion")+
+    ylab("Density")
+)
+@
 \begin{figure}
 \begin{center}
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-2-1} 
-\end{knitrout}
+<<echo=FALSE, warning=FALSE, message=FALSE, fig.dim=c(5,3.5)>>=
+<<plot1>>
+@
 \caption{10000 polls with p= 0.39 and n = 1004}
 \label{plot1} 
 \end{center}
 \end{figure}
 
+<<plot2, echo=FALSE, eval=F, message=FALSE, warning=FALSE, size='scriptsize'>>=
+larger.size <- sample.size *2
+larger.samples <- tibble(sat = numeric(R))
+for(i in 1:R){
+  larger.samples$sat[i] <- (rbinom(1, larger.size, satisfaction)/larger.size)
+}
 
+(larger.polls.hist <- ggplot(larger.samples) +
+    geom_histogram(aes(x=sat, y=after_stat(density)),
+                   breaks = seq(0.325, 0.475, 0.005),
+                   color="grey")+
+    stat_density(aes(x = sat), geom="line") +
+    geom_hline(yintercept=0)+
+    theme_bw()+
+    xlab("Satisfaction proportion")+
+    ylab("Density")
+)
+
+@
 \begin{figure}[H]
 \begin{center}
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-3-1} 
-\end{knitrout}
+<<echo=FALSE, warning=FALSE, message=FALSE, fig.dim=c(5,3.5)>>=
+<<plot2>>
+@
 \caption{10000 polls with p= 0.39 and n = 2008}
 \label{plot2} 
 \end{center}
@@ -164,14 +179,35 @@ The histograms of the polls are shown below. They both follow a relatively norma
 
 The histogram of the resampled polls is shown in Figure \ref{plot3}. It follows a relatively normal distribution and looks closer shape to the Figure \ref{plot1}. The MOE is 0.0303 (approximately 3\%), which matches the Gallup's statement that their February 2025 poll was within 4\% MOE. 
 
+<<plot3, echo=FALSE, eval=F, message=FALSE, warning=FALSE, size='scriptsize'>>=
+gallup.survey <- data.frame(values = sample(c(rep(1, 391), rep(0, 613))))
+resamples <- tibble(value = numeric(R))
+for(i in 1:R){
+  # Take a resample
+  curr.resample <- sample(x = gallup.survey$values,
+                          size = nrow(gallup.survey),
+                          replace = T)
+  # compute the stat on the resample
+  resamples$value[i] <- mean(curr.resample)
+}
 
+(resamples.hist <- ggplot(resamples) +
+    geom_histogram(aes(x=value, y=after_stat(density)),
+                   breaks = seq(0.325, 0.475, 0.005),
+                   color="grey")+
+    stat_density(aes(x = value), geom="line") +
+    geom_hline(yintercept=0)+
+    theme_bw()+
+    xlab("Satisfaction proportion")+
+    ylab("Density")
+)
+@
 
 \begin{figure}[H]
 \begin{center}
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-4-1} 
-\end{knitrout}
+<<echo=FALSE, warning=FALSE, message=FALSE, fig.dim=c(5,3.5)>>=
+<<plot3>>
+@
 \caption{10000 polls from resampling orginal sample}
 \label{plot3} 
 \end{center}
@@ -179,13 +215,80 @@ The histogram of the resampled polls is shown in Figure \ref{plot3}. It follows 
 
 
 We finally look at the effects of the sample size and proportions on MOEs. Figure \ref{plot4} is the estimated MOEs and Figure \ref{plot5} is the Wilson MOEs. As sample size increases, the MOEs decreases. However, the MOE also decreases as proportion gets closer to 1 or 0 because the formula for MOE uses p(1-p),  which becomes incredibly small when dealing with sample proportions close to the maximum or mimimum values. 
+<<plot4, echo=FALSE, eval=F, message=FALSE, warning=FALSE, size='scriptsize'>>=
+n <- seq(100,3000,10)
+p <- seq(0.01, 0.99, 0.01)
+simulations <- tibble()
+counter <- 1
 
+find_moe <- function(size,prob){
+  current <- (rbinom(10000, size, prob)/size)
+  lower_bound <- quantile(current, 0.025)
+  upper_bound <- quantile(current, 0.975)
+  moe<- (upper_bound[[1]] - lower_bound[[1]])/2
+  return(moe)
+}
 
+for(j in 1:length(p)){
+  new <- tibble(n) %>%
+    mutate(
+      p= p[j],
+      moe = 0
+    )
+  simulations <- bind_rows(simulations, new)
+}
+for(j in 1:length(p)){
+  for(i in 1:length(n)){
+    v1 <- n[i]
+    v2 <- p[j]
+    simulations$moe[counter] <- find_moe(v1,v2)
+    counter <- counter +1
+  }
+}
 
+random.MOE = ggplot(simulations)+
+  scale_fill_viridis_c(option = "inferno")+
+  geom_raster(aes(n,p, fill = moe))+
+  labs(x = "sample size (n) ",
+       y = "percent of people happy (p)",
+       title = "Estimated MOEs")+
+  theme_bw()
+
+@
+
+<<plot5, echo=FALSE, eval=F, message=FALSE, warning=FALSE, size='scriptsize'>>=
+# Task 4 
+alpha <- 0.05
+Z <- qnorm(1- alpha/2)
+Wilson.calculations <- tibble(n = numeric(), p = numeric(), Wilson.MOE = numeric())
+
+## calculate each MOE and add to data set
+for(i in 1:length(n)){
+  for(j in 1:length(p)){
+    value.n = n[i]
+    value.p = p[j]
+    
+    Wilson.MOE = Z*(sqrt( value.n * value.p * (1-value.p) + ((Z^2)/4)))/
+      (value.n + Z^2)
+    Wilson.calculations = bind_rows(Wilson.calculations, tibble(n = value.n, p = value.p, Wilson.MOE = Wilson.MOE)) 
+  }
+}
+
+Wilson.MOE = ggplot(Wilson.calculations)+
+  scale_fill_viridis_c(option = "inferno")+
+  geom_raster(aes(n,p, fill = Wilson.MOE))+
+  labs(x = "sample size (n)",
+       y = "percent of people happy (p)",
+       title = "Wilson MOEs")+
+  theme_bw()
+Wilson.MOE
+@
 
 \begin{figure}[H]
 \begin{center}
-
+<<echo=FALSE, warning=FALSE, message=FALSE, fig.dim=c(5,3.5)>>=
+<<plot4>>
+@
 \caption{MOE when comparing n vs p}
 \label{plot4} 
 \end{center}
@@ -193,10 +296,9 @@ We finally look at the effects of the sample size and proportions on MOEs. Figur
 
 \begin{figure}[H]
 \begin{center}
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-6-1} 
-\end{knitrout}
+<<echo=FALSE, warning=FALSE, message=FALSE, fig.dim=c(5,3.5)>>=
+<<plot5>>
+@
 \caption{Wilson MOE when comparing n vs p}
 \label{plot5} 
 \end{center}
