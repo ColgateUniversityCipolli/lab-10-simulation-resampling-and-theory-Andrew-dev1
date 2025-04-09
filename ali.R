@@ -87,6 +87,7 @@ p <- seq(0.01, 0.99, 0.01)
 simulations <- tibble()
 counter <- 1
 
+
 find_moe <- function(size,prob){
   # currents <- tibble(percent = numeric(10000))
   # for(i in 1:10000){
@@ -116,10 +117,36 @@ for(j in 1:length(p)){
   }
 }
 
-ggplot(simulations)+
-  scale_fill_viridis_c(option = "plasma")+
+random.MOE = ggplot(simulations)+
+  scale_fill_viridis_c(option = "inferno")+
   geom_raster(aes(n,p, fill = moe))+
-  labs(x = "sample size",
-       y = "percent of people happy",
-       title = "margins of error comparison")+
+  labs(x = "sample size (n) ",
+       y = "percent of people happy (p)",
+       title = "Estimated MOEs")+
   theme_bw()
+
+# Task 4 
+alpha <- 0.05
+Z <- qnorm(1- alpha/2)
+Wilson.calculations <- tibble(n = numeric(), p = numeric(), Wilson.MOE = numeric())
+
+## calculate each MOE and add to data set
+for(i in 1:length(n)){
+  for(j in 1:length(p)){
+    value.n = n[i]
+    value.p = p[j]
+    
+    Wilson.MOE = Z*(sqrt( value.n * value.p * (1-value.p) + ((Z^2)/4)))/
+      (value.n + Z^2)
+    Wilson.calculations = bind_rows(Wilson.calculations, tibble(n = value.n, p = value.p, Wilson.MOE = Wilson.MOE)) 
+  }
+}
+
+Wilson.MOE = ggplot(Wilson.calculations)+
+  scale_fill_viridis_c(option = "inferno")+
+  geom_raster(aes(n,p, fill = Wilson.MOE))+
+  labs(x = "sample size (n)",
+       y = "percent of people happy (p)",
+       title = "Wilson MOE based from function")+
+  theme_bw()
+Wilson.MOE + random.MOE
